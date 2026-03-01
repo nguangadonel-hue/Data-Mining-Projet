@@ -114,3 +114,160 @@ modele_rf = entrainer_et_evaluer_rf(X_train, y_train, X_test, y_test)
 # 2. **Réduction de l'attrition** : Le faible nombre de faux négatifs (24) signifie que la perte de revenus "surprise" est minimale.
 # 
 # Ce modèle servira de référence (baseline) pour comparer les performances de la prochaine étape : le réseau de neurones (Deep Learning).
+# %% [markdown]
+# ### Analyse de l'importance des variables
+#  L'objectif est d'identifier les caractéristiques qui ont le plus de poids dans la décision de l'algorithme.
+# 
+# Pour Netflix, cette analyse est stratégique car elle permet de :
+# 1. **Identifier les leviers d'action** : Si le prix est la variable dominante, une politique de promotion est nécessaire. Si c'est le temps de visionnage, il faut améliorer les recommandations de contenu.
+# 2. **Simplifier le modèle** : Identifier les variables inutiles qui pourraient être supprimées pour gagner en efficacité.
+# 3. **Justifier les décisions** : Expliquer aux parties prenantes pourquoi certains profils sont considérés comme "à risque".
+# %%# %%
+import pandas as pd
+import seaborn as sns
+
+def analyser_importance_variables(rf_model, X):
+    """
+    Calcule et visualise l'importance de chaque variable dans le modèle Random Forest.
+    """
+    importances = rf_model.feature_importances_
+    noms_variables = X.columns
+    
+    df_importance = pd.DataFrame({
+        'Variable': noms_variables,
+        'Importance': importances
+    }).sort_values(by='Importance', ascending=False)
+    
+    # Affichage graphique
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x='Importance', y='Variable', data=df_importance, palette='viridis')
+    plt.title("Importance des variables - Modèle Random Forest")
+    plt.xlabel("Score d'importance")
+    plt.ylabel("Variables")
+    plt.show()
+    
+    # Affichage textuels des 3 variables dominantes
+    print("Top 3 des variables prédictives :")
+    print(df_importance.head(3))
+    
+    return df_importance
+
+# Appel de la fonction
+# On utilise df.drop('churned', axis=1) pour récupérer les noms originaux des colonnes
+X_original = pd.read_csv('netflix_churn_final.csv').drop('churned', axis=1)
+importance_df = analyser_importance_variables(modele_rf, X_original)
+
+# %%
+# %% [markdown]
+# ## Synthèse de l'Importance des Variables et Cohérence Métier
+# 
+# Cette analyse permet de valider la pertinence de notre modèle Random Forest en confrontant ses résultats à notre analyse exploratoire initiale (EDA).
+# 
+# ### 1. Validation de la fiabilité du modèle
+# 
+# La cohérence entre notre analyse exploratoire (EDA) et l'importance des variables calculée par la Random Forest valide la fiabilité de notre modèle. Le fait que les **variables comportementales** (`watch_hours`, `last_login_days`) surclassent les **variables démographiques** montre que le modèle a capturé les signaux de désengagement réels. 
+# 
+# Cette hiérarchie des caractéristiques explique pourquoi la Random Forest a obtenu de meilleurs résultats que le Deep Learning sur ce volume de données : elle a su isoler et prioriser ces indicateurs clés avec plus d'efficacité, là où un réseau de neurones peut parfois se perdre dans le "bruit" des variables secondaires sur un dataset de moins de 10 000 lignes.
+# 
+# ---
+# 
+# ### 2. Analyse des leviers d'action pour Netflix
+# 
+# L'importance élevée de variables telles que `last_login_days` (nombre de jours depuis la dernière connexion) confirme que le **désengagement progressif** est le principal moteur du churn :
+# 
+# * **Signal Faible** : Une baisse des heures de visionnage (`watch_hours`) est le premier indicateur d'un risque de départ.
+# * **Signal Fort** : L'allongement du délai depuis la dernière connexion est le point de rupture final.
+# 
+# ### 3. Conclusion sur le choix du modèle
+# 
+# Contrairement au Deep Learning, qui nécessite souvent des volumes de données massifs pour extraire des relations complexes, la Random Forest a démontré une capacité supérieure à **hiérarchiser les variables critiques**. En isolant les signaux comportementaux comme prioritaires, le modèle offre une interprétabilité directe, essentielle pour justifier les futures stratégies de rétention client de Netflix.
+
+# %% [markdown]
+# ## Phase 3 : Modélisation par Deep Learning (Réseau de Neurones)
+# 
+# Pour cette dernière phase, nous implémentons un Perceptron Multicouche (MLP). Contrairement à la Random Forest, ce modèle s'appuie sur des couches de neurones pour apprendre des représentations non-linéaires plus abstraites.
+# 
+# **Architecture du modèle :**
+# 1. **Couche d'entrée** : Reçoit les caractéristiques normalisées (X_train_scaled).
+# 2. **Couches cachées (Dense)** : Deux couches avec activation 'relu' pour capturer la complexité des données.
+# 3. **Régularisation (Dropout)** : Utilisée pour prévenir le surapprentissage en désactivant aléatoirement des neurones.
+# 4. **Couche de sortie** : Un seul neurone avec activation 'sigmoid' pour prédire la probabilité de churn (0 à 1).
+# 
+# La fonction de perte utilisée est la **Binary Cross-Entropy** :
+# $$L = -\frac{1}{N} \sum_{i=1}^{N} [y_i \log(\hat{y}_i) + (1 - y_i) \log(1 - \hat{y}_i)]$$
+# %%# %%
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+from sklearn.metrics import classification_report
+
+def entrainer_deep_learning(X_train_scaled, y_train, X_test_scaled, y_test):
+    """
+    Construit, entraîne et évalue un réseau de neurones simple.
+    """
+    # 1. Définition de l'architecture
+    model = Sequential([
+        Dense(32, activation='relu', input_shape=(X_train_scaled.shape[1],)),
+        Dropout(0.2),
+        Dense(16, activation='relu'),
+        Dense(1, activation='sigmoid')
+    ])
+    
+    # 2. Compilation
+    model.compile(optimizer='adam', 
+                  loss='binary_crossentropy', 
+                  metrics=['accuracy'])
+    
+    # 3. Entraînement
+    print("\n--- Début de l'entraînement du Réseau de Neurones ---")
+    history = model.fit(
+        X_train_scaled, y_train, 
+        epochs=50, 
+        batch_size=32, 
+        validation_split=0.2, 
+        verbose=0 # On cache le détail des épqoques pour plus de clarté
+    )
+    
+    # 4. Évaluation
+    loss, accuracy = model.evaluate(X_test_scaled, y_test, verbose=0)
+    print(f"Précision finale du Deep Learning : {accuracy:.4f}")
+    
+    # 5. Prédictions (seuil à 0.5)
+    y_pred_probs = model.predict(X_test_scaled)
+    y_pred = (y_pred_probs > 0.5).astype(int)
+    
+    print("\nRapport de performance Deep Learning :")
+    print(classification_report(y_test, y_pred))
+    
+    # Visualisation de la courbe d'apprentissage
+    plt.figure(figsize=(10, 4))
+    plt.plot(history.history['accuracy'], label='Entraînement')
+    plt.plot(history.history['val_accuracy'], label='Validation')
+    plt.title('Précision du modèle au fil des épouques')
+    plt.legend()
+    plt.show()
+    
+    return model
+
+# Appel de la fonction
+modele_dl = entrainer_deep_learning(X_train, y_train, X_test, y_test)
+# %%
+# %% [markdown]
+# ## Interprétation de la courbe d'apprentissage (Deep Learning)
+# 
+# Le graphique de précision au fil des époques permet de visualiser la progression de l'apprentissage du réseau de neurones et de détecter d'éventuels problèmes de généralisation.
+# 
+# ### 1. Analyse de la convergence
+# * **Phase de progression rapide** : Entre l'époque 0 et 5, on observe une forte hausse de la précision (de 74% à 88%). Le modèle identifie rapidement les structures principales du dataset Netflix.
+# * **Phase de stabilisation** : Après l'époque 10, les courbes s'aplatissent. Le modèle a atteint sa capacité maximale d'apprentissage sur ce jeu de données.
+# 
+# ### 2. Évaluation de l'Overfitting (Surapprentissage)
+# L'écart entre la courbe d'**Entraînement** (bleue) et la courbe de **Validation** (orange) est un indicateur clé :
+# * **Écart réduit** : Les deux courbes restent très proches l'une de l'autre jusqu'à l'époque 50. Cela signifie que le modèle généralise bien et qu'il sera capable de prédire le churn sur de nouveaux clients qu'il n'a jamais rencontrés.
+# * **Absence de divergence** : On ne voit pas la courbe de validation chuter alors que celle d'entraînement monte, ce qui confirme que la régularisation (Dropout) a fonctionné.
+# 
+# ### 3. Comparaison avec la Random Forest
+# Bien que le réseau de neurones soit stable et performant (environ 90% de précision), ses résultats restent légèrement inférieurs à ceux obtenus par la **Random Forest (96.8%)**. 
+# 
+# **Conclusion** : Pour ce volume de données (3992 lignes), la structure tabulaire est mieux exploitée par les algorithmes d'arbres de décision. Le Deep Learning est ici un modèle robuste, mais moins précis que l'approche par forêt aléatoire.
+# %%
