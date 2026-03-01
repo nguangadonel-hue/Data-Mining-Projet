@@ -1,5 +1,5 @@
 # %% [Markodwn]
-# Projet de Prediction du Churn Netflix - Phase 2 et 3
+# Projet de Prediction du Churn Netflix 
 
 Ce projet identifie les facteurs de résiliation (churn) des clients Netflix et compare l'efficacité de deux approches de Machine Learning : la Forêt Aléatoire (Random Forest) et le Deep Learning.
 
@@ -44,3 +44,4 @@ L'analyse de l'importance des variables confirme que le churn est pilote par des
 * **watch_hours** : Une baisse significative du temps de visionnage hebdomadaire constitue un signal precurseur de desengagement.
 
 **Conclusion** : Nous preconisons l'utilisation de la **Random Forest**. Ce modele offre une precision superieure sur ce volume de donnees et permet une interpretabilite directe des leviers d'action, contrairement au reseau de neurones qui agit ici comme une boite noire.
+
