@@ -270,4 +270,40 @@ modele_dl = entrainer_deep_learning(X_train, y_train, X_test, y_test)
 # Bien que le réseau de neurones soit stable et performant (environ 90% de précision), ses résultats restent légèrement inférieurs à ceux obtenus par la **Random Forest (96.8%)**. 
 # 
 # **Conclusion** : Pour ce volume de données (3992 lignes), la structure tabulaire est mieux exploitée par les algorithmes d'arbres de décision. Le Deep Learning est ici un modèle robuste, mais moins précis que l'approche par forêt aléatoire.
+# %% [markdown]
+# ## Conclusion Finale et Recommandations Stratégiques
+# 
+# Ce projet de Data Mining visait à prédire le risque de désabonnement (churn) des clients Netflix en comparant deux approches : une forêt aléatoire et un réseau de neurones.
+# 
+# ### 1. Bilan de la performance des modèles
+# 
+# * **Random Forest** : Ce modèle s'est révélé être le plus performant avec une précision de **96,8%** et un rappel de **95,2%**. Sa structure par arbres de décision est parfaitement adaptée à la taille de notre dataset (3992 lignes) et permet une interprétabilité directe des résultats.
+# * **Deep Learning** : Le réseau de neurones a montré une bonne stabilité avec une précision d'environ **90%**. Cependant, sur ce volume de données tabulaires, il n'a pas réussi à surpasser l'approche par forêt aléatoire, tout en étant plus complexe à paramétrer (boîte noire).
+# 
+# ### 2. Facteurs clés de prédiction
+# 
+# L'analyse de l'importance des variables a permis d'identifier que le churn n'est pas lié au profil démographique du client (âge, localisation), mais à son **comportement d'utilisation** :
+# * **Désengagement temporel** (`last_login_days`) : C'est le signal le plus critique. Plus le délai depuis la dernière connexion s'allonge, plus la probabilité de départ est élevée.
+# * **Intensité de consommation** (`watch_hours`) : Une baisse du volume horaire de visionnage est un indicateur précurseur de résiliation.
+# 
+# ---
+# 
+# ### 3. Recommandations pour Netflix
+# 
+# Sur la base de ces résultats, nous préconisons les actions suivantes :
+# 
+# 1. **Déploiement du modèle Random Forest** : Utiliser ce modèle en production pour attribuer un "score de risque" à chaque client de manière hebdomadaire.
+# 2. **Système d'alerte précoce** : Déclencher des campagnes de réengagement automatisées dès que la variable `last_login_days` dépasse un seuil critique défini par le modèle.
+# 3. **Personnalisation du contenu** : Pour les clients dont les `watch_hours` déclinent, proposer des recommandations de contenus "Premium" ou des nouveautés afin de relancer l'intérêt pour la plateforme.
+# 4. **Optimisation marketing** : Grâce à la précision du modèle, limiter les offres promotionnelles aux seuls clients identifiés à "haut risque" pour éviter les pertes de revenus inutiles sur les clients fidèles.
+# %% [markdown]
+# ## Synthèse Finale du Projet de Data Mining
+# 
+# ### Objectif atteint
+# Nous avons réussi à construire un pipeline complet capable de prédire le départ des clients Netflix avec une précision supérieure à 95% grâce à la **Random Forest**.
+# 
+# ### Ce qu'il faut retenir pour le business
+# 1. **Anticipation** : Le modèle détecte les signaux de désabonnement avant qu'ils ne surviennent.
+# 2. **Comportement vs Démographie** : Ce n'est pas "qui" est le client qui compte, mais "comment" il utilise Netflix (fréquence de connexion et heures de visionnage).
+# 3. **Modularité technique** : Le projet est structuré en fonctions réutilisables, permettant d'intégrer facilement de nouvelles données ou de tester de nouveaux algorithmes à l'avenir.
 # %%
